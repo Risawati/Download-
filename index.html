@@ -13,7 +13,7 @@
         }
 
         body {
-            background-color: #5a5a5a; /* Background gelap transparan seperti di gambar */
+            background-color: #5a5a5a;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -21,17 +21,15 @@
             padding: 20px;
         }
 
-        /* Container Utama Modal */
         .modal-card {
             background-color: #f7f9fc;
             width: 100%;
             max-width: 360px;
-            border-radius: 28px; /* Sudut sangat membulat khas Android modern */
+            border-radius: 28px;
             padding: 24px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
         }
 
-        /* Judul dan Subjudul */
         .modal-title {
             font-size: 20px;
             color: #1f1f1f;
@@ -45,7 +43,6 @@
             margin-bottom: 24px;
         }
 
-        /* Baris Input/Info File & Folder */
         .info-row {
             display: flex;
             align-items: center;
@@ -67,13 +64,12 @@
             font-size: 15px;
             color: #1f1f1f;
             padding-bottom: 8px;
-            border-bottom: 1px solid #74777f; /* Garis bawah khas material design */
+            border-bottom: 1px solid #74777f;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
 
-        /* Checkbox Jangan Tampilkan Lagi */
         .checkbox-row {
             display: flex;
             align-items: center;
@@ -119,7 +115,6 @@
             color: #44474e;
         }
 
-        /* Bagian Tombol Aksi */
         .actions {
             display: flex;
             justify-content: flex-end;
@@ -143,13 +138,13 @@
         }
 
         .btn-download {
-            background-color: #0b57d0; /* Warna biru khas Google/Android */
+            background-color: #0b57d0;
             color: white;
             border: none;
             font-size: 14px;
             font-weight: 500;
             padding: 10px 24px;
-            border-radius: 20px; /* Bentuk pil (pill-shaped) */
+            border-radius: 20px;
             cursor: pointer;
             box-shadow: 0 1px 2px rgba(0,0,0,0.1);
         }
@@ -161,23 +156,22 @@
 </head>
 <body>
 
-    <div class="modal-card">
-        <h2 class="modal-title">Download file</h2>
-        <p class="modal-subtitle">Nama file</p>
+    <div class="modal-card" id="downloadModal">
+        <h2 class="modal-title">Download file lagi?</h2>
+        <p class="modal-subtitle">Nama file sudah ada</p>
 
         <!-- Baris Nama File -->
         <div class="info-row">
             <div class="icon">
-                <!-- SVG Icon Dokumen/File -->
                 <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
             </div>
-            <div class="input-line">PIT_M_03-DOC010_Personal_Income_Tax_R</div>
+            <!-- ID ditambahkan di sini untuk mengambil nama file via JS -->
+            <div class="input-line" id="fileName">PIT_M_03-DOC010_Personal_Income_Tax_R.txt</div>
         </div>
 
         <!-- Baris Folder Tujuan -->
         <div class="info-row">
             <div class="icon">
-                <!-- SVG Icon Folder -->
                 <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
             </div>
             <div class="input-line">Download</div>
@@ -192,11 +186,48 @@
 
         <!-- Tombol Aksi -->
         <div class="actions">
-            <button class="btn-batal">Batal</button>
-            <button class="btn-download">Download</button>
+            <button class="btn-batal" id="btnBatal">Batal</button>
+            <button class="btn-download" id="btnDownload">Download</button>
         </div>
     </div>
 
+    <!-- JAVASCRIPT UNTUK AKSI DOWNLOAD -->
+    <script>
+        const btnDownload = document.getElementById('btnDownload');
+        const btnBatal = document.getElementById('btnBatal');
+        const modal = document.getElementById('downloadModal');
+        const fileNameElement = document.getElementById('fileName');
+
+        // Fungsi saat tombol Download dipencet
+        btnDownload.addEventListener('click', () => {
+            const fileName = fileNameElement.innerText;
+            
+            // 1. Membuat file bohongan/simulasi berisi teks di memori browser
+            const fileContent = "Ini adalah isi file simulasi tax return Anda.";
+            const blob = new Blob([fileContent], { type: "text/plain" });
+            
+            // 2. Membuat elemen link tersembunyi secara dinamis
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = fileName; // Mengatur nama file saat diunduh sesuai teks di modal
+            
+            // 3. Memicu klik otomatis pada link tersembunyi untuk memulai download
+            document.body.appendChild(link);
+            link.click();
+            
+            // 4. Bersihkan link dari memori browser
+            document.body.removeChild(link);
+            
+            // Opsional: Sembunyikan modal setelah download selesai
+            alert('File mulai diunduh!');
+            modal.style.display = 'none';
+        });
+
+        // Fungsi saat tombol Batal dipencet
+        btnBatal.addEventListener('click', () => {
+            modal.style.display = 'none'; // Menyembunyikan modal
+        });
+    </script>
+
 </body>
 </html>
-
