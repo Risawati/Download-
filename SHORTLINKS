@@ -1,97 +1,125 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generator Tautan Pendek</title>
-    <style>
-        /* Desain sederhana agar mirip dengan gambar kamu */
-        body { font-family: sans-serif; background-color: #e0ebf8; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
-        h2 { margin-top: 0; color: #333; }
-        .form-group { margin-bottom: 15px; }
-        input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
-        button { width: 100%; padding: 12px; background-color: #4a90e2; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; font-weight: bold; }
-        button:hover { background-color: #357abd; }
-        .result { margin-top: 20px; padding: 10px; background: #f0f9ff; border-left: 4px solid #4a90e2; word-break: break-all; display: none; }
-    </style>
-</head>
-<body>
-
-<div class="container">
-    <h2>Generator Tautan Pendek</h2>
+export default {
+  async fetch(request, env, ctx) {
+    const url = new URL(request.url);
     
-    <div class="form-group">
-        <input type="url" id="longUrl" placeholder="https://example.com" required>
-    </div>
-    
-    <div class="form-group">
-        <input type="text" id="customSlug" placeholder="siput opsional (contoh: link-keren)">
-    </div>
-    
-    <button id="generateBtn">Buat tautan pendek</button>
-
-    <!-- Tempat menampilkan hasil -->
-    <div id="resultBox" class="result">
-        <strong>Tautan Pendek Kamu:</strong><br>
-        <a id="shortenedLink" href="#" target="_blank"></a>
-    </div>
-</div>
-
-<script>
-document.getElementById('generateBtn').addEventListener('click', function() {
-    const longUrl = document.getElementById('longUrl').value.trim();
-    let customSlug = document.getElementById('customSlug').value.trim();
-    const resultBox = document.getElementById('resultBox');
-    const shortenedLink = document.getElementById('shortenedLink');
-
-    // Validasi input URL utama
-    if (!longUrl) {
-        alert("Silakan masukkan URL tujuan terlebih dahulu!");
-        return;
-    }
-
-    // Jika user tidak mengisi slug, buat teks acak sepanjang 6 karakter
-    if (!customSlug) {
-        customSlug = Math.random().toString(36).substring(2, 8);
-    } else {
-        // Membersihkan slug dari spasi atau karakter aneh agar aman untuk URL
-        customSlug = customSlug.replace(/[^a-zA-Z0-9-_]/g, '-');
-    }
-
-    // Mengambil basis URL aplikasi saat ini (misal: http://127.0.0.1:5500/)
-    const baseUrl = window.location.origin + window.location.pathname;
-    const finalShortUrl = `${baseUrl}?to=${customSlug}`;
-
-    // Simpan relasi antara slug kustom dan URL asli ke LocalStorage
-    // Di dunia nyata/produksi, data ini harusnya dikirim dan disimpan ke Database (MySQL/MongoDB)
-    localStorage.setItem(customSlug, longUrl);
-
-    // Tampilkan hasilnya di layar
-    shortenedLink.href = finalShortUrl;
-    shortenedLink.innerText = finalShortUrl;
-    resultBox.style.display = 'block';
-});
-
-// LOGIKA PENGALIHAN (REDIRECTOR)
-// Fungsi ini otomatis berjalan saat seseorang membuka link hasil generate tersebut
-window.addEventListener('DOMContentLoaded', () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const slugKey = urlParams.get('to');
-
-    if (slugKey) {
-        // Cari URL asli berdasarkan slug yang ada di LocalStorage
-        const targetUrl = localStorage.getItem(slugKey);
-
+    // 1. JIKA USER MEMBUKA HALAMAN UTAMA (TAMPILAN GENERATOR)
+    if (url.pathname === "/" && request.method === "GET") {
+      const pageParam = url.searchParams.get("to");
+      
+      // Logika Redirect: Jika ada parameter ?to=slug, cari di Cloudflare KV
+      if (pageParam) {
+        const targetUrl = await env.SHORT_LINKS.get(pageParam);
         if (targetUrl) {
-            // Jika ditemukan, langsung alihkan halaman ke URL tujuan asli
-            window.location.href = targetUrl;
+          return Response.redirect(targetUrl, 302);
         } else {
-            alert("Maaf, tautan pendek tidak ditemukan atau sudah kedaluwarsa.");
+          return new Response("Waduh, tautan kustom tidak ditemukan!", { status: 404 });
         }
-    }
-});
-</script>
+      }
 
-</body>
-</html>
+      // Tampilkan HTML Formulir Generator (Sama seperti gambar kamu)
+      return new Response(getHTML(url.origin), {
+        headers: { "Content-Type": "text/html;charset=UTF-8" },
+      });
+    }
+
+    // 2. JIKA FORMULIR DIKIRIM (PROSES GENERATE LINK VIA API)
+    if (url.pathname === "/api/shorten" && request.method === "POST") {
+      try {
+        const data = await request.json();
+        const longUrl = data.longUrl?.trim();
+        let customSlug = data.customSlug?.trim();
+
+        if (!longUrl) {
+          return new Response(JSON.stringify({ error: "URL tujuan wajib diisi!" }), { status: 400 });
+        }
+
+        // Jika slug kosong, buat string acak sepanjang 6 karakter
+        if (!customSlug) {
+          customSlug = Math.random().toString(36).substring(2, 8);
+        } else {
+          // Bersihkan slug agar aman untuk URL
+          customSlug = customSlug.replace(/[^a-zA-Z0-9-_]/g, '-');
+        }
+
+        // Simpan ke Cloudflare KV secara permanen
+        await env.SHORT_LINKS.put(customSlug, longUrl);
+
+        const finalShortUrl = `${url.origin}/?to=${customSlug}`;
+        return new Response(JSON.stringify({ shortUrl: finalShortUrl }), {
+          headers: { "Content-Type": "application/json" },
+        });
+
+      } catch (err) {
+        return new Response(JSON.stringify({ error: "Gagal memproses data." }), { status: 500 });
+      }
+    }
+
+    return new Response("Halaman Tidak Ditemukan", { status: 404 });
+  }
+};
+
+// Fungsi pembantu untuk menyisipkan HTML UI Generator Tautan Pendek
+function getHTML(originUrl) {
+  return `
+  <!DOCTYPE html>
+  <html lang="id">
+  <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Generator Tautan Pendek</title>
+      <style>
+          body { font-family: sans-serif; background-color: #e0ebf8; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+          .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
+          h2 { margin-top: 0; color: #333; font-size: 24px; margin-bottom: 20px; }
+          .form-group { margin-bottom: 15px; }
+          input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+          button { width: 100%; padding: 12px; background-color: #4a90e2; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; font-weight: bold; }
+          button:hover { background-color: #357abd; }
+          .result { margin-top: 20px; padding: 12px; background: #f0f9ff; border-left: 4px solid #4a90e2; word-break: break-all; display: none; border-radius: 4px; }
+      </style>
+  </head>
+  <body>
+  <div class="container">
+      <h2>Generator Tautan Pendek</h2>
+      <div class="form-group">
+          <input type="url" id="longUrl" placeholder="https://example.com" required>
+      </div>
+      <div class="form-group">
+          <input type="text" id="customSlug" placeholder="siput opsional">
+      </div>
+      <button id="generateBtn">Buat tautan pendek</button>
+      <div id="resultBox" class="result">
+          <strong>Tautan Pendek Kamu:</strong><br>
+          <a id="shortenedLink" href="#" target="_blank"></a>
+      </div>
+  </div>
+  <script>
+      document.getElementById('generateBtn').addEventListener('click', async function() {
+          const longUrl = document.getElementById('longUrl').value;
+          const customSlug = document.getElementById('customSlug').value;
+          const resultBox = document.getElementById('resultBox');
+          const shortenedLink = document.getElementById('shortenedLink');
+
+          if(!longUrl) { alert('Masukkan URL tujuan!'); return; }
+
+          // Kirim data ke Cloudflare Worker API backend
+          const response = await fetch('/api/shorten', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ longUrl, customSlug })
+          });
+
+          const resData = await response.json();
+          if(resData.shortUrl) {
+              shortenedLink.href = resData.shortUrl;
+              shortenedLink.innerText = resData.shortUrl;
+              resultBox.style.display = 'block';
+          } else {
+              alert(resData.error || 'Terjadi kesalahan.');
+          }
+      });
+  </script>
+  </body>
+  </html>
+  `;
+}
