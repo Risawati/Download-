@@ -1,26 +1,41 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <title>Download Dokumen</title>
+<meta charset="UTF-8">
+<title>Download Dokumen</title>
+
+<style>
+body{
+    margin:0;
+    background:#ffffff;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+    font-family:Arial,sans-serif;
+}
+
+.download-btn{
+    background:#000;
+    color:#fff;
+    text-decoration:none;
+    padding:10px 22px;
+    border-radius:6px;
+    font-size:14px;
+    font-weight:bold;
+    transition:.3s;
+}
+
+.download-btn:hover{
+    background:#222;
+}
+</style>
+
 </head>
-<body style="font-family: Arial, sans-serif; text-align:center; margin-top:100px;">
+<body>
 
-<h2>Download Dokumen PDF</h2>
-
-<a href="tax.pdf"
-   download
-   style="
-      display:inline-block;
-      font-size:32px;
-      font-weight:bold;
-      color:white;
-      background:#0d6efd;
-      padding:18px 40px;
-      border-radius:10px;
-      text-decoration:none;
-   ">
-⬇ DOWNLOAD
+<a class="download-btn" href="tax.pdf" download>
+⬇ Download Dokumen
 </a>
 
 </body>
